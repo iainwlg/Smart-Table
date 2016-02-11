@@ -1,9 +1,10 @@
 ng.module('smart-table')
   .directive('stSearch', ['stConfig', '$timeout','$parse', function (stConfig, $timeout, $parse) {
     return {
-      require: '^stTable',
-      link: function (scope, element, attr, ctrl) {
-        var tableCtrl = ctrl;
+      require: ['^stTable', '?ngModel'],
+      link: function (scope, element, attr, ctrls) {
+        var tableCtrl = ctrls[0],
+            ngModelCtrl = ctrls[1];
         var promise = null;
         var throttle = attr.stDelay || stConfig.search.delay;
         var event = attr.stInputEvent || stConfig.search.inputEvent;
@@ -11,14 +12,14 @@ ng.module('smart-table')
         attr.$observe('stSearch', function (newValue, oldValue) {
           var input = element[0].value;
           if (newValue !== oldValue && input) {
-            ctrl.tableState().search = {};
+            tableCtrl.tableState().search = {};
             tableCtrl.search(input, newValue);
           }
         });
 
         //table state -> view
         scope.$watch(function () {
-          return ctrl.tableState().search;
+          return tableCtrl.tableState().search;
         }, function (newValue, oldValue) {
           var predicateExpression = attr.stSearch || '$';
           if (newValue.predicateObject && $parse(predicateExpression)(newValue.predicateObject) !== element[0].value) {
@@ -38,6 +39,12 @@ ng.module('smart-table')
             promise = null;
           }, throttle);
         });
+        
+        if(ngModelCtrl){
+            ngModelCtrl.$formatters.push(function(newVal){
+                tableCtrl.search(newVal, attr.stSearch || '');
+            });
+        }
       }
     };
   }]);
